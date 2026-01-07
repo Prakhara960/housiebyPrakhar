@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tambola Elite - Fixed Pro</title>
+    <title>Tambola Elite - Final Sync Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
@@ -13,18 +13,18 @@
         .app { width: 100%; max-width: 480px; }
         .glass-card { background: var(--card); border-radius: 24px; padding: 18px; color: #1a1a1a; margin-bottom: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
         .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 1px; background: #222; border: 2px solid #000; border-radius: 6px; overflow: hidden; }
-        .cell { background: #fff; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; cursor: pointer; position: relative; }
+        .cell { background: #fff; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 900; cursor: pointer; position: relative; border: 0.1px solid #ddd; }
         .cell.marked::after { content: ''; position: absolute; width: 32px; height: 32px; border: 3px solid var(--primary); border-radius: 50%; background: rgba(255,61,0,0.15); }
         .cell.empty { background: #f0f0f5; }
         .btn { border: none; border-radius: 14px; padding: 16px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.3s; text-transform: uppercase; margin-top: 10px; }
         .btn-p { background: linear-gradient(45deg, var(--primary), #ff8e53); color: white; }
         input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eee; margin-bottom: 10px; text-align: center; font-weight: bold; }
         .prize-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-        .fh-special { background: #fff9e6; border-left: 5px solid var(--gold); padding: 12px; border-radius: 8px; }
+        .fh-special { background: #fff9e6; border-left: 5px solid var(--gold); padding: 12px; border-radius: 8px; margin-top: 5px; }
         .big-call { font-size: 110px; font-weight: 900; color: var(--primary); text-align: center; line-height: 1; margin: 10px 0; }
         .player-chip { background: #e3f2fd; color: #1976d2; padding: 4px 10px; border-radius: 20px; font-size: 11px; margin: 2px; display: inline-block; font-weight: 800; border: 1px solid #1976d2; }
         .hidden { display: none !important; }
-        .history { display: flex; justify-content: center; gap: 8px; }
+        .history { display: flex; justify-content: center; gap: 8px; margin-top: 5px; }
         .small-ball { width: 35px; height: 35px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #333; }
         .small-ball.active { background: var(--primary); color: #fff; }
     </style>
@@ -33,21 +33,21 @@
 
 <div class="app">
     <div id="setup" class="glass-card" style="text-align: center;">
-        <h1 style="color:var(--primary); font-weight:900;">TAMBOLA ELITE</h1>
-        <p style="color:#888; font-size:12px;">Fixed Real-time Sync V5</p>
-        <input type="text" id="username" placeholder="NAME">
+        <h1 style="color:var(--primary); font-weight:900; margin:0;">TAMBOLA ELITE</h1>
+        <p style="color:#888; font-size:12px; margin-bottom: 20px;">v6.0 - High Reliable Sync</p>
+        <input type="text" id="username" placeholder="APNA NAAM">
         <button class="btn btn-p" onclick="init(true)">CREATE GAME (HOST)</button>
         <div style="margin:10px; font-weight:800; color:#ccc;">- OR -</div>
-        <input type="text" id="gameID" placeholder="ROOM CODE">
-        <button class="btn" style="background:#1a1a1a; color:white;" onclick="init(false)">JOIN NOW</button>
+        <input type="text" id="gameID" placeholder="ROOM CODE DAALEIN">
+        <button class="btn" style="background:#1a1a1a; color:white;" onclick="init(false)">JOIN ROOM</button>
     </div>
 
     <div id="game-ui" class="hidden">
         <div id="host-panel" class="glass-card hidden" style="text-align: center;">
             <div id="p-list"></div>
             <div class="big-call" id="currNum">--</div>
-            <button class="btn btn-p" onclick="draw()">CALL NEXT NUMBER</button>
-            <button class="btn" style="background:#25D366; color:white;" onclick="shareGame()">📤 INVITE PLAYERS</button>
+            <button class="btn btn-p" id="drawBtn" onclick="draw()">CALL NEXT NUMBER</button>
+            <button class="btn" style="background:#25D366; color:white; font-size: 12px;" onclick="shareGame()">📤 INVITE ON WHATSAPP</button>
         </div>
 
         <div class="glass-card" style="text-align: center; padding:12px;">
@@ -58,10 +58,10 @@
 
         <div class="glass-card">
             <span style="font-size:10px; font-weight:900; color:#aaa;">DIVIDENDS (₹300)</span>
-            <div id="divDisp"></div>
+            <div id="divDisp"><p style="font-size:12px; color:#888;">Waiting for Host to sync...</p></div>
         </div>
 
-        <div class="glass-card" style="padding: 8px;">
+        <div class="glass-card" style="padding: 10px;">
             <div style="display:flex; justify-content: space-between; font-size: 12px; font-weight: 900; margin-bottom: 8px;">
                 <span id="my-name">PLAYER</span><span style="color:var(--primary)">TICKET</span>
             </div>
@@ -104,22 +104,28 @@
                 document.getElementById('host-panel').classList.remove('hidden');
                 peer.on('connection', c => {
                     connections.push(c);
+                    c.on('open', () => {
+                        console.log("Player Connected");
+                        sync(); // Immediate sync on open
+                    });
                     c.on('data', d => {
                         if(d.type === 'JOIN') {
                             if(!players.includes(d.name)) players.push(d.name);
-                            sync(); // Sync players to everyone
+                            sync();
                         }
                         handleData(d);
                     });
                 });
                 updateUI();
             } else { 
-                const roomCode = document.getElementById('gameID').value;
+                const roomCode = document.getElementById('gameID').value.trim();
                 conn = peer.connect(roomCode);
                 conn.on('open', () => {
                     conn.send({type: 'JOIN', name: name});
                 });
                 conn.on('data', handleData);
+                // Fail-safe: Request data if screen is empty
+                setTimeout(() => { if(called.length === 0) conn.send({type: 'REQUEST_SYNC'}); }, 3000);
             }
             generateTicket();
         });
@@ -159,6 +165,7 @@
             players = d.players;
             updateUI();
         }
+        if(d.type === 'REQUEST_SYNC' && isHost) sync();
         if(d.type === 'CLAIM' && isHost) {
             if(!dividends[d.idx].winner) {
                 dividends[d.idx].winner = d.name;
@@ -171,7 +178,9 @@
     function sync() {
         if(!isHost) return;
         const data = { type: 'SYNC', called, dividends, players };
-        connections.forEach(c => c.send(data));
+        connections.forEach(c => {
+            if(c.open) c.send(data);
+        });
         updateUI();
     }
 
@@ -180,7 +189,10 @@
         let n; do { n = Math.floor(Math.random()*90)+1; } while(called.includes(n));
         called.push(n);
         sync();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(n.toString()));
+        try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(n.toString()));
+        } catch(e) {}
     }
 
     function claim(idx) {
@@ -198,8 +210,8 @@
         }
         else if(type.includes("Full House")) canClaim = marked.length === 15;
         else if(type === "Corners") {
-            let c = [rowNums[0][0], rowNums[0][rowNums[0].length-1], rowNums[2][0], rowNums[2][rowNums[2].length-1]];
-            canClaim = c.every(n => marked.includes(n));
+            let corners = [rowNums[0][0], rowNums[0][rowNums[0].length-1], rowNums[2][0], rowNums[2][rowNums[2].length-1]];
+            canClaim = corners.every(n => marked.includes(n));
         }
         else if(type === "Middle Number") canClaim = marked.includes(rowNums[1][2]);
         else if(type.includes("Col")) {
@@ -248,7 +260,7 @@
     function shareGame() {
         const url = window.location.origin + window.location.pathname + "?game=" + peer.id;
         navigator.clipboard.writeText(url);
-        alert("Join Link Copied! Share with friends.");
+        alert("Link Copied! Share it.");
     }
 
     window.onload = () => {
