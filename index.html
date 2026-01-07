@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tambola Elite - No Lag Edition</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #FF3D00; --gold: #FFD700; --bg: #0b0b14; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 10px; }
+        .app { width: 100%; max-width: 450px; margin: auto; }
+        .card { background: #fff; border-radius: 20px; padding: 15px; color: #1a1a1a; margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        /* Host Specific Dashboard */
+        .host-info-panel { background: #e3f2fd; border: 2px solid #2196F3; border-radius: 15px; padding: 10px; margin-bottom: 10px; }
+        .p-chip { background: #2196F3; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; margin: 2px; display: inline-block; font-weight: 700; }
+
+        /* Calling Area */
+        .call-card { text-align: center; border: 3px solid #eee; background: #fafafa; padding: 20px; border-radius: 25px; }
+        .big-num { font-size: 90px; font-weight: 900; color: var(--primary); line-height: 1; margin: 5px 0; }
+        .status-badge { font-size: 10px; background: #4CAF50; color: white; padding: 3px 10px; border-radius: 10px; font-weight: 900; }
+
+        /* Ticket Grid */
+        .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; background: #000; border: 2px solid #000; border-radius: 10px; overflow: hidden; }
+        .cell { background: #fff; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 800; cursor: pointer; }
+        .cell.marked { background: var(--primary) !important; color: #fff; }
+        .cell.empty { background: #f1f3f5; }
+
+        /* Controls */
+        .btn { border: none; border-radius: 15px; padding: 16px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; font-size: 14px; }
+        .btn-p { background: linear-gradient(135deg, var(--primary), #ff7043); color: white; box-shadow: 0 5px 15px rgba(255,61,0,0.3); }
+        .btn-wa { background: #25D366; color: white; margin-top: 10px; }
+        input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #ddd; margin-bottom: 10px; text-align: center; font-weight: 700; }
+        
+        .prize-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div id="lobby" class="card" style="text-align: center;">
+        <h1 style="margin:0; font-weight:900; color:var(--primary);">TAMBOLA PRO</h1>
+        <p style="font-size:12px; color:#888; margin-bottom:20px;">v11.0 Live Broadcast Fix</p>
+        <input type="text" id="user-name" placeholder="APNA NAAM LIKHEIN">
+        <button class="btn btn-p" onclick="init(true)">CREATE GAME (HOST)</button>
+        <div style="margin:10px; font-weight:900; color:#ccc;">- OR -</div>
+        <input type="text" id="room-id" placeholder="ROOM CODE DAALEIN">
+        <button class="btn" style="background:#1a1a1a; color:white;" onclick="init(false)">JOIN ROOM</button>
+    </div>
+
+    <div id="game-ui" class="hidden">
+        <div class="card call-card">
+            <span id="sync-label" class="status-badge">SYNCING...</span>
+            <div id="main-num" class="big-num">--</div>
+            <div id="last-5" style="color:#888; font-size:12px; font-weight:800;">Waiting for first number...</div>
+        </div>
+
+        <div id="host-panel" class="card host-info-panel hidden">
+            <div style="font-size:11px; font-weight:900; color:#1976D2; margin-bottom:5px;">LIVE PLAYERS:</div>
+            <div id="p-list"></div>
+            <button class="btn btn-p" onclick="draw()" style="margin-top:10px;">CALL NEXT</button>
+            <button class="btn btn-wa" onclick="shareWA()">📤 WHATSAPP INVITE LINK</button>
+        </div>
+
+        <div class="card">
+            <span style="font-size:10px; font-weight:900; color:#aaa; text-transform:uppercase;">Dividends (₹300)</span>
+            <div id="prize-list"></div>
+        </div>
+
+        <div class="card" style="padding:10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <b id="display-name" style="font-size:13px;">PLAYER</b>
+                <b style="color:var(--primary); font-size:13px;">#ULTRA-TICKET</b>
+            </div>
+            <div class="grid" id="ticket-grid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let peer, conn, isHost, myTicket = [], players = [], conns = [];
+    let called = [], dividends = [
+        {name: "Early 5", amt: 20, win: null},
+        {name: "Top Line", amt: 15, win: null},
+        {name: "Middle Line", amt: 15, win: null},
+        {name: "Bottom Line", amt: 15, win: null},
+        {name: "Corners", amt: 15, win: null},
+        {name: "Full House 1", amt: 70, win: null, fh: true},
+        {name: "Full House 2", amt: 50, win: null, fh: true}
+    ];
+
+    function init(hostMode) {
+        const name = document.getElementById('user-name').value.trim();
+        if(!name) return alert("Please enter name!");
+        isHost = hostMode;
+        peer = new Peer();
+
+        peer.on('open', id => {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            document.getElementById('display-name').innerText = name.toUpperCase();
+            
+            buildTicket();
+
+            if(isHost) {
+                players = [name];
+                document.getElementById('host-panel').classList.remove('hidden');
+                document.getElementById('sync-label').innerText = "HOSTING LIVE";
+                peer.on('connection', c => {
+                    conns.push(c);
+                    c.on('data', d => {
+                        if(d.type === 'JOIN') { if(!players.includes(d.name)) players.push(d.name); broadcast(); }
+                        if(d.type === 'CLAIM') handleClaim(d);
+                    });
+                    c.on('open', () => broadcast());
+                });
+                setInterval(broadcast, 2000); // Pulse sync every 2 seconds
+            } else {
+                const rid = document.getElementById('room-id').value.trim();
+                conn = peer.connect(rid, {reliable: true});
+                conn.on('open', () => {
+                    conn.send({type: 'JOIN', name: name});
+                    document.getElementById('sync-label').innerText = "CONNECTED";
+                });
+                conn.on('data', d => {
+                    if(d.type === 'SYNC') {
+                        called = d.called; dividends = d.dividends; players = d.players;
+                        document.getElementById('main-num').innerText = d.last || '--';
+                        document.getElementById('last-5').innerText = "History: " + called.slice(-6, -1).reverse().join(', ');
+                        updatePrizes();
+                        if(d.last && !called.slice(0,-1).includes(d.last)) speak(d.last);
+                    }
+                });
+            }
+            updatePrizes();
+        });
+    }
+
+    function buildTicket() {
+        const grid = Array.from({length: 3}, () => Array(9).fill(0));
+        const pools = Array.from({length: 9}, (_, i) => {
+            let s = (i === 0 ? 1 : i * 10), e = (i === 8 ? 90 : i * 10 + 9);
+            return Array.from({length: e-s+1}, (_, j) => s+j).sort(() => Math.random() - 0.5);
+        });
+        for(let r=0; r<3; r++) {
+            let cols = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5).slice(0, 5);
+            cols.forEach(c => grid[r][c] = pools[c].pop());
+        }
+        for(let c=0; c<9; c++) {
+            let t = []; for(let r=0; r<3; r++) if(grid[r][c]) t.push(grid[r][c]);
+            t.sort((a,b)=>a-b); let idx=0;
+            for(let r=0; r<3; r++) if(grid[r][c]) grid[r][c] = t[idx++];
+        }
+        myTicket = grid;
+        const container = document.getElementById('ticket-grid');
+        container.innerHTML = '';
+        grid.flat().forEach(n => {
+            const el = document.createElement('div');
+            el.className = n ? 'cell' : 'cell empty';
+            el.innerText = n || '';
+            if(n) el.onclick = () => { if(called.includes(n)) el.classList.toggle('marked'); };
+            container.appendChild(el);
+        });
+    }
+
+    function broadcast() {
+        if(!isHost) return;
+        const last = called[called.length-1];
+        const data = {type: 'SYNC', called, dividends, players, last};
+        conns.forEach(c => { if(c.open) c.send(data); });
+        document.getElementById('main-num').innerText = last || '--';
+        document.getElementById('p-list').innerHTML = players.map(p => `<span class="p-chip">${p}</span>`).join('');
+        document.getElementById('last-5').innerText = "History: " + called.slice(-6, -1).reverse().join(', ');
+        updatePrizes();
+    }
+
+    function draw() {
+        if(!isHost || called.length >= 90) return;
+        let n; do { n = Math.floor(Math.random()*90)+1; } while(called.includes(n));
+        called.push(n);
+        broadcast();
+        speak(n);
+    }
+
+    function updatePrizes() {
+        document.getElementById('prize-list').innerHTML = dividends.map((d, i) => `
+            <div class="prize-row">
+                <div><b style="font-size:13px">${d.name}</b><br><small style="color:var(--primary); font-weight:800;">₹${d.amt}</small></div>
+                ${d.win ? `<b style="color:#2ecc71; font-size:11px;">🏆 ${d.win}</b>` : `<button onclick="claim(${i})" style="background:#000; color:#fff; border:none; padding:7px 16px; border-radius:10px; font-size:10px; font-weight:800;">CLAIM</button>`}
+            </div>`).join('');
+    }
+
+    function claim(idx) {
+        const marked = Array.from(document.querySelectorAll('.cell.marked')).map(el => parseInt(el.innerText));
+        if(marked.length === 0) return alert("Pehle ticket mark karein!");
+        const data = {type: 'CLAIM', idx, name: document.getElementById('user-name').value};
+        if(isHost) handleClaim(data); else conn.send(data);
+        alert("Claim bheja gaya hai!");
+    }
+
+    function handleClaim(d) {
+        if(!dividends[d.idx].win) {
+            dividends[d.idx].win = d.name;
+            broadcast();
+            if(dividends[d.idx].fh) confetti({particleCount: 150, spread: 70, origin: { y: 0.6 }});
+        }
+    }
+
+    function shareWA() {
+        const link = window.location.origin + window.location.pathname + "?room=" + peer.id;
+        const text = `🎟️ *TAMBOLA PARTY!* 🎟️\n\n*Room ID:* ${peer.id}\n*Join Link:* ${link}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+    }
+
+    function speak(n) {
+        try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(n.toString())); } catch(e){}
+    }
+
+    window.onload = () => {
+        const params = new URLSearchParams(window.location.search);
+        if(params.has('room')) document.getElementById('room-id').value = params.get('room');
+    };
+</script>
+</body>
+</html>
