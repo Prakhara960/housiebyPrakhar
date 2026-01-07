@@ -3,77 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tambola Pro - Zero-Lag Edition</title>
+    <title>Tambola Live - Instant Sync</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #FF3D00; --gold: #FFD700; --bg: #0b0b14; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 10px; overflow-x: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 10px; }
         .app { width: 100%; max-width: 450px; margin: auto; }
-        .card { background: #fff; border-radius: 20px; padding: 15px; color: #1a1a1a; margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .card { background: #fff; border-radius: 20px; padding: 15px; color: #1a1a1a; margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(0,0,0,0.05); }
         
-        /* Fixed Player List for Host */
-        .player-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; justify-content: center; }
-        .p-tag { background: #e3f2fd; color: #1976d2; padding: 5px 12px; border-radius: 15px; font-size: 11px; font-weight: 800; border: 1px solid #1976d2; animation: fadeIn 0.5s; }
-        
-        /* Grid Ticket */
-        .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; background: #333; border: 2px solid #000; border-radius: 8px; overflow: hidden; }
-        .cell { background: #fff; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; position: relative; }
-        .cell.marked { background: var(--primary) !important; color: white; }
-        .cell.empty { background: #f0f0f5; }
+        /* Host Real-time Player List */
+        .host-dashboard { background: #f0f7ff; border: 2px solid #007bff; border-radius: 15px; padding: 12px; margin-bottom: 15px; }
+        .live-indicator { height: 10px; width: 10px; background: #ff0000; border-radius: 50%; display: inline-block; animation: blink 1s infinite; margin-right: 5px; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .player-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .p-chip { background: #1a1a1a; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 
-        /* Sync Status */
-        .sync-indicator { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #4CAF50; display: block; margin-bottom: 5px; }
+        /* Calling Area */
+        .call-box { text-align: center; padding: 10px 0; }
+        .num-main { font-size: 100px; font-weight: 900; color: var(--primary); line-height: 1; }
         
-        .big-call { font-size: 80px; font-weight: 900; color: var(--primary); text-align: center; margin: 5px 0; line-height: 1; }
-        .btn { border: none; border-radius: 12px; padding: 15px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; margin-top: 8px; transition: 0.2s; }
-        .btn-p { background: linear-gradient(45deg, var(--primary), #ff8e53); color: white; }
-        input { width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #ddd; margin-bottom: 10px; text-align: center; font-weight: 900; font-size: 16px; }
+        /* Ticket Grid */
+        .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; background: #333; border: 2px solid #000; border-radius: 10px; overflow: hidden; }
+        .cell { background: #fff; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; }
+        .cell.marked { background: var(--primary) !important; color: #fff; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
+        .cell.empty { background: #f1f3f5; }
+
+        .btn { border: none; border-radius: 15px; padding: 18px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; font-size: 15px; transition: 0.2s; }
+        .btn-p { background: linear-gradient(135deg, var(--primary), #ff7043); color: white; }
+        .btn:active { transform: scale(0.97); }
+        input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eee; margin-bottom: 10px; text-align: center; font-weight: 700; font-size: 16px; background: #fafafa; }
         
-        .prize-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .fh { background: #fff9e6; border-left: 4px solid var(--gold); padding: 10px; border-radius: 10px; margin-top: 5px; }
+        .prize-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .prize-item:last-child { border: none; }
+        .fh-card { background: #fff9e6; border: 1.5px solid var(--gold); border-radius: 12px; padding: 12px; margin-top: 8px; }
         .hidden { display: none !important; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div class="app">
-    <div id="lobby" class="card" style="text-align: center;">
-        <h1 style="margin:0; font-weight:900;">TAMBOLA <span style="color:var(--primary)">ULTRA</span></h1>
-        <p style="color:#888; font-size:12px; margin-bottom:20px;">v8.0 Fixed-Sync Engine</p>
-        <input type="text" id="nameInput" placeholder="ENTER YOUR NAME">
-        <button class="btn btn-p" onclick="initGame(true)">HOST GAME</button>
-        <div style="margin:10px; font-weight:900; color:#ccc;">OR</div>
-        <input type="text" id="idInput" placeholder="PASTE ROOM CODE">
-        <button class="btn" style="background:#1a1a1a; color:white;" onclick="initGame(false)">JOIN GAME</button>
+    <div id="view-setup" class="card" style="text-align: center;">
+        <h1 style="margin:0; font-weight:900; color:var(--primary); letter-spacing:-1px;">TAMBOLA LIVE</h1>
+        <p style="font-size:12px; color:#888; margin-bottom:20px;">₹300 PRIZE POOL • INSTANT SYNC</p>
+        <input type="text" id="inp-name" placeholder="YOUR NAME">
+        <button class="btn btn-p" onclick="connect(true)">HOST GAME</button>
+        <div style="margin:12px; font-weight:900; color:#ddd;">OR</div>
+        <input type="text" id="inp-id" placeholder="ROOM CODE">
+        <button class="btn" style="background:#1a1a1a; color:white;" onclick="connect(false)">JOIN ROOM</button>
     </div>
 
-    <div id="game-ui" class="hidden">
-        <div class="card" style="padding:10px;">
-            <div id="sync-status" class="sync-indicator">● SYSTEM LIVE</div>
-            <div id="host-only" class="hidden">
-                <div class="player-bar" id="player-list"></div>
-                <div class="big-call" id="main-num">--</div>
-                <button class="btn btn-p" onclick="draw()">CALL NEXT</button>
-                <button class="btn" style="background:#25D366; color:white;" onclick="copyID()">INVITE FRIENDS</button>
+    <div id="view-game" class="hidden">
+        <div id="host-panel" class="card host-dashboard hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:13px; font-weight:900; color:#007bff;"><span class="live-indicator"></span>LIVE PLAYERS</span>
+                <button onclick="copyCode()" style="background:#007bff; color:white; border:none; padding:4px 10px; border-radius:8px; font-size:10px; font-weight:800;">COPY ID</button>
             </div>
-            <div id="player-only" style="text-align:center;">
-                <div style="font-size:12px; color:#888;">LAST 5 NUMBERS</div>
-                <div id="history" style="display:flex; justify-content:center; gap:8px; margin-top:5px;"></div>
+            <div id="live-players" class="player-chips"></div>
+            <div class="call-box">
+                <div class="num-main" id="call-num">--</div>
             </div>
+            <button class="btn btn-p" onclick="draw()">CALL NEXT</button>
+        </div>
+
+        <div id="player-status" class="card" style="padding:10px; text-align:center; font-size:12px; font-weight:800; color:#4CAF50;">
+            ✓ INSTANT SYNC ACTIVE
         </div>
 
         <div class="card">
-            <span style="font-size:10px; font-weight:900; color:#aaa;">PRIZES (₹300)</span>
+            <span style="font-size:11px; font-weight:900; color:#aaa; text-transform:uppercase;">Dividends</span>
             <div id="prize-list"></div>
         </div>
 
-        <div class="card" style="padding:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:900; margin-bottom:8px;">
-                <span id="user-display">PLAYER</span><span style="color:var(--primary)">#ULTRA-TICKET</span>
+        <div class="card" style="padding:10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <b id="tag-name" style="font-size:13px; color:#333;">PLAYER</b>
+                <b style="color:var(--primary); font-size:13px;">TICKET #101</b>
             </div>
             <div class="grid" id="ticket-grid"></div>
         </div>
@@ -81,7 +88,7 @@
 </div>
 
 <script>
-    let peer, conn, isHost, myTicket = [], players = [], conns = [];
+    let peer, conn, isHost, myTicket = [], players = [], allConns = [];
     let called = [], dividends = [
         {name: "Early 5", amt: 20, win: null},
         {name: "Top Line", amt: 15, win: null},
@@ -89,52 +96,62 @@
         {name: "Bottom Line", amt: 15, win: null},
         {name: "Corners", amt: 15, win: null},
         {name: "Middle Number", amt: 10, win: null},
-        {name: "Breakfast (Col 1-3)", amt: 20, win: null},
-        {name: "Lunch (Col 4-6)", amt: 20, win: null},
-        {name: "Dinner (Col 7-9)", amt: 20, win: null},
-        {name: "Full House 1", amt: 70, win: null, fh: true},
-        {name: "Full House 2", amt: 50, win: null, fh: true},
-        {name: "Full House 3", amt: 30, win: null, fh: true}
+        {name: "Col 1-3", amt: 20, win: null},
+        {name: "Col 4-6", amt: 20, win: null},
+        {name: "Col 7-9", amt: 20, win: null},
+        {name: "Full House 1", amt: 70, win: null, isFH: true},
+        {name: "Full House 2", amt: 50, win: null, isFH: true},
+        {name: "Full House 3", amt: 30, win: null, isFH: true}
     ];
 
-    function initGame(hostMode) {
-        const name = document.getElementById('nameInput').value;
-        if(!name) return alert("Enter Name!");
+    function connect(hostMode) {
+        const name = document.getElementById('inp-name').value.trim();
+        if(!name) return alert("Enter Name");
         isHost = hostMode;
         peer = new Peer();
 
         peer.on('open', id => {
-            document.getElementById('lobby').classList.add('hidden');
-            document.getElementById('game-ui').classList.remove('hidden');
-            document.getElementById('user-display').innerText = name.toUpperCase();
+            document.getElementById('view-setup').classList.add('hidden');
+            document.getElementById('view-game').classList.remove('hidden');
+            document.getElementById('tag-name').innerText = name.toUpperCase();
             
+            // Build UI immediately so player sees everything instantly
+            buildTicket();
+            renderPrizes();
+
             if(isHost) {
                 players = [name];
-                document.getElementById('host-only').classList.remove('hidden');
+                document.getElementById('host-panel').classList.remove('hidden');
+                document.getElementById('player-status').classList.add('hidden');
                 peer.on('connection', c => {
-                    conns.push(c);
+                    allConns.push(c);
                     c.on('data', d => {
-                        if(d.type === 'JOIN') { if(!players.includes(d.name)) players.push(d.name); fullSync(); }
+                        if(d.type === 'JOIN') {
+                            if(!players.includes(d.name)) players.push(d.name);
+                            syncAll();
+                        }
                         if(d.type === 'CLAIM') handleClaim(d);
                     });
+                    c.on('open', () => syncAll());
                 });
-                setInterval(fullSync, 2000); // FORCE AUTO-SYNC EVERY 2 SECONDS
+                updateLivePlayers();
             } else {
-                const roomID = document.getElementById('idInput').value.trim();
-                conn = peer.connect(roomID, {reliable: true});
+                const room = document.getElementById('inp-id').value.trim();
+                conn = peer.connect(room, {reliable: true});
                 conn.on('open', () => conn.send({type: 'JOIN', name: name}));
                 conn.on('data', d => {
                     if(d.type === 'SYNC') {
                         called = d.called; dividends = d.dividends; players = d.players;
-                        updateUI();
+                        renderPrizes();
+                        // Audio for player
+                        if(d.last) speak(d.last);
                     }
                 });
             }
-            createTicket();
         });
     }
 
-    function createTicket() {
+    function buildTicket() {
         const grid = Array.from({length: 3}, () => Array(9).fill(0));
         const pools = Array.from({length: 9}, (_, i) => {
             let s = i === 0 ? 1 : i * 10, e = i === 8 ? 90 : i * 10 + 9;
@@ -161,59 +178,59 @@
         });
     }
 
-    function fullSync() {
+    function syncAll() {
         if(!isHost) return;
-        const data = {type:'SYNC', called, dividends, players};
-        conns.forEach(c => { if(c.open) c.send(data); });
-        updateUI();
+        const lastNum = called[called.length-1];
+        const data = {type: 'SYNC', called, dividends, players, last: lastNum};
+        allConns.forEach(c => { if(c.open) c.send(data); });
+        updateLivePlayers();
+        renderPrizes();
+        document.getElementById('call-num').innerText = lastNum || '--';
     }
 
     function draw() {
         if(!isHost || called.length >= 90) return;
         let n; do { n = Math.floor(Math.random()*90)+1; } while(called.includes(n));
         called.push(n);
-        fullSync();
-        try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(n.toString())); } catch(e){}
+        syncAll();
+        speak(n);
     }
 
     function handleClaim(d) {
         if(!dividends[d.idx].win) {
             dividends[d.idx].win = d.name;
-            fullSync();
-            if(dividends[d.idx].fh) {
-                confetti({particleCount:150, spread:70, origin:{y:0.6}});
-            }
+            syncAll();
+            if(dividends[d.idx].isFH) confetti({particleCount: 150, spread: 70, origin: { y: 0.6 }});
         }
     }
 
-    function updateUI() {
-        const last = [...called].reverse().slice(0, 5);
-        if(!isHost) {
-            document.getElementById('history').innerHTML = last.map(n => `<div style="background:#1a1a1a; color:#fff; width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900;">${n}</div>`).join('') || '--';
-        } else {
-            document.getElementById('main-num').innerText = called[called.length-1] || '--';
-            document.getElementById('player-list').innerHTML = players.map(p => `<span class="p-tag">${p}</span>`).join('');
-        }
-
+    function renderPrizes() {
         document.getElementById('prize-list').innerHTML = dividends.map((d, i) => `
-            <div class="prize-row ${d.fh ? 'fh' : ''}">
+            <div class="prize-item ${d.isFH ? 'fh-card' : ''}">
                 <div><b style="font-size:13px">${d.name}</b><br><small style="color:var(--primary); font-weight:900;">₹${d.amt}</small></div>
-                ${d.win ? `<b style="color:#2ecc71; font-size:12px;">🏆 ${d.win}</b>` : `<button onclick="claimNow(${i})" style="background:#000; color:#fff; border:none; padding:6px 15px; border-radius:8px; font-size:10px; font-weight:800;">CLAIM</button>`}
+                ${d.win ? `<b style="color:#2ecc71; font-size:12px;">🏆 ${d.win}</b>` : `<button onclick="sendClaim(${i})" style="background:#000; color:#fff; border:none; padding:7px 16px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer;">CLAIM</button>`}
             </div>`).join('');
     }
 
-    function claimNow(idx) {
-        const marked = Array.from(document.querySelectorAll('.cell.marked')).map(el => parseInt(el.innerText));
-        if(marked.length === 0) return alert("Mark numbers on ticket first!");
-        
-        const msg = {type:'CLAIM', idx, name: document.getElementById('nameInput').value};
-        if(isHost) handleClaim(msg); else conn.send(msg);
-        alert("Claim sent to Host!");
+    function updateLivePlayers() {
+        document.getElementById('live-players').innerHTML = players.map(p => `<span class="p-chip">${p}</span>`).join('');
     }
 
-    function copyID() {
+    function sendClaim(idx) {
+        const marked = Array.from(document.querySelectorAll('.cell.marked')).map(el => parseInt(el.innerText));
+        if(marked.length === 0) return alert("Mark ticket!");
+        const data = {type: 'CLAIM', idx, name: document.getElementById('inp-name').value};
+        if(isHost) handleClaim(data); else conn.send(data);
+        alert("Claimed! Check host screen.");
+    }
+
+    function speak(n) {
+        try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(n.toString())); } catch(e){}
+    }
+
+    function copyCode() {
         navigator.clipboard.writeText(peer.id);
-        alert("Room Code Copied: " + peer.id);
+        alert("Copied: " + peer.id);
     }
 </script>
 </body>
